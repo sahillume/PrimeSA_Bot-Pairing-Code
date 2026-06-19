@@ -1,86 +1,68 @@
-# <div align="center">
+<div align="center">
 
-<img src="logo.png" width="150" alt="PrimeSA_Bot">
+<img src="logo.png" width="170" alt="PrimeSA_Bot Logo"/>
 
 # PrimeSA_Bot
 
-### ⚡ Fast • Secure • Reliable WhatsApp Multi-Device Session Generator
+### **Fast • Secure • Reliable WhatsApp Multi-Device Session Generator**
 
-<p align="center">
-Generate WhatsApp Pair Codes instantly with a modern, secure and lightweight web interface.
+<p>
+  <a href="https://github.com/sahillume/PrimeSA_Bot-Pairing-Code">
+    <img src="https://img.shields.io/badge/GitHub-Repository-black?style=for-the-badge&logo=github" alt="GitHub"/>
+  </a>
+  <a href="https://primesa-bot-26.onrender.com">
+    <img src="https://img.shields.io/badge/Render-Live-success?style=for-the-badge&logo=render" alt="Render"/>
+  </a>
+  <img src="https://img.shields.io/badge/WhatsApp-Multi--Device-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" alt="WhatsApp"/>
+  <img src="https://img.shields.io/badge/Node.js-20+-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js"/>
+  <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="License"/>
 </p>
 
-<p align="center">
+<br>
 
-[![Generate Pair Code](https://img.shields.io/badge/Generate%20Pair%20Code-Online-success?style=for-the-badge)](https://primesa-bot-26.onrender.com)
+<a href="https://primesa-bot-26.onrender.com">
+<img src="https://img.shields.io/badge/🟢%20Generate%20Pair%20Code-Click%20Here-22c55e?style=for-the-badge&labelColor=16a34a" alt="Generate Pair Code"/>
+</a>
 
-[![YouTube](https://img.shields.io/badge/YouTube-Professor%20Sahil-red?style=for-the-badge\&logo=youtube)](https://youtube.com/@professorsahil-m7q?si=qj6xxaxPEHEYVO8d)
+<br><br>
 
-[![GitHub](https://img.shields.io/badge/GitHub-sahillume-black?style=for-the-badge\&logo=github)](https://github.com/sahillume)
+**Generate WhatsApp Multi-Device Pair Codes instantly with a clean, secure, and modern web interface. PrimeSA_Bot is designed for speed, reliability, and easy deployment.**
 
-</p>
-
----
-
-<p align="center">
-<img src="preview-animation.gif" width="100%">
-</p>
+</div>
 
 ---
 
 # ✨ Features
 
-✅ WhatsApp Multi Device Pairing
-
-✅ QR Code Generation
-
-✅ Pair Code Support
-
-✅ Automatic Session Cleanup
-
-✅ Fast & Lightweight
-
-✅ Modern Responsive Interface
-
-✅ Render Deployment Ready
-
-✅ Open Source
+* 📱 WhatsApp Multi Device Support
+* 🔗 Pair Code Generator
+* 📷 QR Code Generator
+* 🔒 Secure Session Generation
+* 🧹 Automatic Session Cleanup
+* ⚡ Fast Performance
+* 📲 Mobile Friendly Interface
+* 🚀 Easy Deployment
+* 🌐 Render Ready
+* 🛡️ Lightweight & Reliable
 
 ---
 
-# 🚀 Generate Pair Code
+# 🌍 Live Demo
 
-Click below to generate your WhatsApp pairing code instantly.
+### Website
 
-### 👇
+> **https://primesa-bot-26.onrender.com**
 
-[![Generate Pair Code](https://img.shields.io/badge/CLICK%20HERE-Generate%20Pair%20Code-25D366?style=for-the-badge\&logo=whatsapp\&logoColor=white)](https://primesa-bot-26.onrender.com)
+Launch the live application and generate your WhatsApp Pair Code instantly.
 
 ---
 
-# 📥 Installation
-
-Clone the repository
+# 🚀 Installation
 
 ```bash
 git clone https://github.com/sahillume/PrimeSA_Bot-Pairing-Code.git
-```
-
-Open the project
-
-```bash
 cd PrimeSA_Bot-Pairing-Code
-```
-
-Install packages
-
-```bash
 npm install
-```
-
-Start the bot
-
-```bash
 npm start
 ```
 
@@ -88,87 +70,125 @@ npm start
 
 # ☁️ Deploy to Render
 
-Create a new **Web Service**
+Use the following configuration when deploying your project on **Render**.
 
-Runtime
+| Setting           | Value         |
+| ----------------- | ------------- |
+| **Build Command** | `npm install` |
+| **Start Command** | `npm start`   |
+| **Node Version**  | **20+**       |
 
-```
-Node
-```
+After deployment, your application will be available through your Render URL.
 
-Build Command
+---
 
-```bash
-npm install
-```
+# ⚙️ Mega Configuration
 
-Start Command
+PrimeSA_Bot can automatically upload generated session files to a Mega account.
 
-```bash
-npm start
-```
+## Option 1 — Edit `mega.js`
 
-Node Version
+Replace the default credentials with your own:
 
-```
-20+
+```javascript
+email: "YOUR_MEGA_EMAIL",
+password: "YOUR_MEGA_PASSWORD"
 ```
 
 ---
 
-# 🔐 Mega Configuration
+## Option 2 — Environment Variables (Recommended)
 
-Create a Mega account
+```env
+MEGA_EMAIL=your_email@example.com
+MEGA_PASSWORD=your_password
+```
 
-https://mega.nz
+Using environment variables is recommended because it keeps sensitive information out of your source code.
 
-Edit **mega.js**
+---
 
-```js
-const auth = {
-  email: "YOUR_MEGA_EMAIL",
-  password: "YOUR_MEGA_PASSWORD"
-}
+# 📸 Screenshots
+
+## Logo
+
+```
+logo.png
 ```
 
 ---
 
-# 📱 Preview
+## Preview
 
-| Desktop           | Mobile           |
-| ----------------- | ---------------- |
-| ✔ Responsive      | ✔ Responsive     |
-| ✔ Dark & Light UI | ✔ Touch Friendly |
-| ✔ Fast Loading    | ✔ Optimized      |
+```
+preview-animation.gif
+```
+
+Replace these placeholders with your own project images for the best presentation.
 
 ---
 
-# 🛡 Why PrimeSA_Bot?
+# 📂 Project Structure
 
-PrimeSA_Bot is designed to provide a clean, secure and reliable WhatsApp Multi-Device pairing experience. The project focuses on speed, simplicity and stability while remaining easy to deploy and maintain.
+```
+PrimeSA_Bot
+│
+├── index.js
+├── pair.js
+├── qr.js
+├── mega.js
+├── package.json
+├── README.md
+├── logo.png
+└── preview-animation.gif
+```
+
+---
+
+# 💡 Why PrimeSA_Bot?
+
+✅ Modern Interface
+
+✅ Secure Pair Code Generation
+
+✅ Fast & Lightweight
+
+✅ WhatsApp Multi-Device Support
+
+✅ Render Deployment Ready
+
+✅ Beginner Friendly
+
+✅ Easy Configuration
 
 ---
 
 # 📞 Support
 
-If you encounter any issues or have suggestions, feel free to open an issue on GitHub or reach out through the YouTube channel.
+### GitHub
+
+https://github.com/sahillume
+
+### YouTube
+
+https://youtube.com/@professorsahil-m7q?si=qj6xxaxPEHEYVO8d
+
+Feel free to open issues, contribute improvements, or follow the project for future updates.
 
 ---
 
-# ⭐ Support the Project
+# ⭐ Star the Repository
 
-If you enjoy this project, please consider giving it a ⭐ on GitHub.
-
-It helps the project grow and motivates future updates.
+If you find this project useful, consider giving it a ⭐ on GitHub. Your support helps improve the project and motivates future development.
 
 ---
 
-<p align="center">
+<div align="center">
 
-Made with ❤️ for the WhatsApp Community
+## ❤️ Made with Love
 
-<b>PrimeSA_Bot</b>
+### **Made with ❤️ by PrimeSA_Bot specialized by professor Sahil**
 
-© 2026 All Rights Reserved
+**Thank you for supporting PrimeSA_Bot!**
 
-</p>
+</div>
