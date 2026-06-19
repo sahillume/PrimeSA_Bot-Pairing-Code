@@ -1,156 +1,231 @@
 import express from 'express';
 import fs from 'fs';
-import { randomUUID } from 'crypto';
 import pino from 'pino';
 import jwt from 'jsonwebtoken';
-import { makeWASocket, useMultiFileAuthState, makeCacheableSignalKeyStore, Browsers, fetchLatestBaileysVersion, jidNormalizedUser } from '@whiskeysockets/baileys';
 import pn from 'awesome-phonenumber';
+import { randomUUID } from 'crypto';
+
+import {
+  makeWASocket,
+  useMultiFileAuthState,
+  makeCacheableSignalKeyStore,
+  Browsers,
+  fetchLatestBaileysVersion,
+  jidNormalizedUser
+} from '@whiskeysockets/baileys';
 
 const router = express.Router();
-const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
+const logger = pino({ level: 'info' });
 
+// =====================
+// CONFIG
+// =====================
 const MAX_ACTIVE = parseInt(process.env.MAX_ACTIVE_SESSIONS) || 20;
-const PAIR_EXPIRES = parseInt(process.env.PAIR_EXPIRES) || 60; // seconds
+const PAIR_EXPIRES = parseInt(process.env.PAIR_EXPIRES) || 60;
 
-// map token -> { sock, dir, phone, timeout }
-const activeSessions = new Map();
+const sessions = new Map();
 
+// =====================
+// SAFE CLEANUP
+// =====================
 function safeRm(dir) {
-  try { if (fs.existsSync(dir)) fs.rmSync(dir, { recursive: true, force: true }); } catch (e) { logger.error({ err: e }, 'remove failed'); }
+  try {
+    if (fs.existsSync(dir)) {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  } catch (e) {
+    logger.error({ err: e }, 'cleanup failed');
+  }
 }
 
+// =====================
+// ADMIN AUTH
+// =====================
 function verifyAdmin(req, res, next) {
   try {
     const token = req.cookies?.admin_token;
     if (!token) return res.status(401).json({ error: 'Not authorized' });
-    const secret = process.env.ADMIN_SECRET || 'devsecret';
-    const decoded = jwt.verify(token, secret);
-    if (!decoded || !decoded.admin) return res.status(401).json({ error: 'Not authorized' });
+
+    const decoded = jwt.verify(token, process.env.ADMIN_SECRET || 'devsecret');
+    if (!decoded?.admin) return res.status(401).json({ error: 'Not authorized' });
+
     next();
-  } catch (e) {
+  } catch {
     return res.status(401).json({ error: 'Not authorized' });
   }
 }
 
+// =====================
+// ROUTE: PAIRING
+// =====================
 router.get('/', async (req, res) => {
-  const raw = req.query.number;
+  let raw = req.query.number;
   if (!raw) return res.status(400).json({ error: 'Phone number required' });
 
-  // Validate phone
+  if (sessions.size >= MAX_ACTIVE) {
+    return res.status(429).json({ error: 'Server busy' });
+  }
+
+  // normalize phone
   let num = String(raw).replace(/[^0-9+]/g, '');
   const phone = pn(num.startsWith('+') ? num : '+' + num);
-  if (!phone.isValid()) return res.status(400).json({ error: 'Invalid phone number' });
+
+  if (!phone.isValid()) {
+    return res.status(400).json({ error: 'Invalid phone number' });
+  }
+
   num = phone.getNumber('e164').replace('+', '');
 
-  if (activeSessions.size >= MAX_ACTIVE) return res.status(429).json({ error: 'Server busy. Try again later.' });
-
   const token = randomUUID();
-  const dir = `./sessions/${token}`;
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  const dir = `./sessions/PrimeSA_${token}`;
+
+  fs.mkdirSync(dir, { recursive: true });
+
+  let sock;
+  let qrSent = false;
+  let finished = false;
+
+  sessions.set(token, { dir, num });
+
+  // auto expire session
+  const expireTimer = setTimeout(() => {
+    logger.info({ token }, 'session expired');
+
+    try {
+      sock?.ev?.removeAllListeners();
+      sock?.end?.();
+    } catch {}
+
+    safeRm(dir);
+    sessions.delete(token);
+
+    if (!finished && !res.headersSent) {
+      res.status(408).json({ error: 'Pairing expired' });
+    }
+  }, PAIR_EXPIRES * 1000);
 
   try {
     const { state, saveCreds } = await useMultiFileAuthState(dir);
     const { version } = await fetchLatestBaileysVersion();
 
-    const socketConfig = {
+    sock = makeWASocket({
       version,
-      auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'fatal' }).child({ level: 'fatal' })) },
-      printQRInTerminal: false,
+      auth: {
+        creds: state.creds,
+        keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'fatal' }))
+      },
       logger: pino({ level: 'silent' }),
       browser: Browsers.windows('Chrome'),
-    };
+      markOnlineOnConnect: false,
+      printQRInTerminal: false
+    });
 
-    const createSocket = () => makeWASocket(socketConfig);
-    const sock = createSocket();
-
-    // Save creds when updated
+    // creds save
     sock.ev.on('creds.update', saveCreds);
 
-    // When paired (creds updated/registered) send token as text and cleanup
-    const onPaired = async () => {
+    // pairing success handler
+    sock.ev.on('creds.update', async () => {
+      if (finished) return;
+
       try {
-        const j = jidNormalizedUser(num + '@s.whatsapp.net');
-        const msg = `✅ PrimeSA_Bot paired successfully.\nSession Token: ${token}\nDo NOT share this token.`;
-        try { await sock.sendMessage(j, { text: msg }); } catch (e) { logger.error({ err: e }, 'failed send token'); }
-      } finally {
-        // clear expiry timeout and cleanup after short delay
-        const info = activeSessions.get(token);
-        if (info && info.timeout) clearTimeout(info.timeout);
+        const jid = jidNormalizedUser(num + '@s.whatsapp.net');
+
+        await sock.sendMessage(jid, {
+          text: `✅ PrimeSA_Bot paired successfully\nToken: ${token}`
+        });
+
+        finished = true;
+
+        clearTimeout(expireTimer);
+
         setTimeout(() => {
-          try { sock.ev.removeAllListeners(); } catch (e) {}
-          try { sock.end?.(); } catch (e) {}
-          activeSessions.delete(token);
+          try {
+            sock?.ev?.removeAllListeners();
+            sock?.end?.();
+          } catch {}
+
+          safeRm(dir);
+          sessions.delete(token);
         }, 5000);
+      } catch {}
+    });
+
+    // connection handler
+    sock.ev.on('connection.update', async ({ connection, qr, lastDisconnect }) => {
+      if (qr && !qrSent && !finished) {
+        qrSent = true;
+        return res.json({
+          success: true,
+          qr,
+          token,
+          expiresIn: PAIR_EXPIRES
+        });
       }
-    };
 
-    sock.ev.on('creds.update', onPaired);
-
-    // Register active session with expiry
-    const timeout = setTimeout(() => {
-      try {
-        logger.info({ token, num }, 'pairing expired; cleaning');
-        try { sock.ev.removeAllListeners(); } catch (e) {}
-        try { sock.end?.(); } catch (e) {}
-      } finally {
-        safeRm(dir);
-        activeSessions.delete(token);
+      if (connection === 'open') {
+        logger.info({ token }, 'connected');
       }
-    }, PAIR_EXPIRES * 1000);
 
-    activeSessions.set(token, { sock, dir, phone: num, timeout });
+      if (connection === 'close') {
+        const code = lastDisconnect?.error?.output?.statusCode;
 
-    // Request pairing code
-    const rawCode = await sock.requestPairingCode(num);
-    const pairingCode = rawCode?.match(/.{1,4}/g)?.join('-') || rawCode;
+        if (code === 401) {
+          safeRm(dir);
+          sessions.delete(token);
+        }
 
-    if (!res.headersSent) return res.json({ success: true, pairingCode, token, expiresIn: PAIR_EXPIRES });
+        if ([515, 503].includes(code)) {
+          try {
+            sock = makeWASocket({
+              version,
+              auth: {
+                creds: state.creds,
+                keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'fatal' }))
+              },
+              logger: pino({ level: 'silent' }),
+              browser: Browsers.windows('Chrome')
+            });
+
+            sock.ev.on('creds.update', saveCreds);
+          } catch {}
+        }
+      }
+    });
 
   } catch (err) {
-    logger.error({ err }, 'pair generation failed');
+    logger.error({ err }, 'pairing failed');
     safeRm(dir);
-    if (!res.headersSent) return res.status(500).json({ error: 'Failed to generate pairing code' });
+    sessions.delete(token);
+
+    if (!res.headersSent) {
+      return res.status(500).json({ error: 'Failed to create session' });
+    }
   }
 });
 
-// Admin-only endpoint to list active sessions
+// =====================
+// ADMIN ROUTES
+// =====================
 router.get('/_active', verifyAdmin, (req, res) => {
-  const out = [];
-  for (const [token, info] of activeSessions.entries()) out.push({ token, phone: info.phone });
-  res.json({ active: out });
+  const list = [...sessions.entries()].map(([token, v]) => ({
+    token,
+    phone: v.num
+  }));
+
+  res.json({ active: list });
 });
 
-// Admin-only: download creds (creds.json) for a token
-router.get('/download/:token', verifyAdmin, (req, res) => {
-  const token = req.params.token;
-  const info = activeSessions.get(token);
-  const dir = info ? info.dir : `./sessions/${token}`;
-  const credsPath = `${dir}/creds.json`;
-  if (!fs.existsSync(credsPath)) return res.status(404).json({ error: 'creds not found' });
-  try {
-    const data = fs.readFileSync(credsPath, 'utf8');
-    res.setHeader('Content-Type', 'application/json');
-    res.send(data);
-  } catch (e) {
-    res.status(500).json({ error: 'failed to read creds' });
-  }
-});
-
-// Admin-only: revoke / delete a token session
 router.delete('/:token', verifyAdmin, (req, res) => {
-  const token = req.params.token;
-  const info = activeSessions.get(token);
+  const { token } = req.params;
+  const info = sessions.get(token);
+
   if (info) {
-    try { if (info.timeout) clearTimeout(info.timeout); } catch (e) {}
-    try { info.sock.ev.removeAllListeners(); info.sock.end?.(); } catch (e) {}
     safeRm(info.dir);
-    activeSessions.delete(token);
+    sessions.delete(token);
     return res.json({ ok: true });
   }
-  // if not active, try to remove from disk
-  const dir = `./sessions/${token}`;
-  if (fs.existsSync(dir)) { safeRm(dir); return res.json({ ok: true }); }
-  return res.status(404).json({ error: 'token not found' });
+
+  return res.status(404).json({ error: 'not found' });
 });
 
 export default router;
