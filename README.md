@@ -116,14 +116,6 @@ Using environment variables is recommended because it keeps sensitive informatio
 logo.png
 ```
 
----
-
-## Preview
-
-```
-preview-animation.gif
-```
-
 Replace these placeholders with your own project images for the best presentation.
 
 ---
@@ -140,7 +132,6 @@ PrimeSA_Bot
 ├── package.json
 ├── README.md
 ├── logo.png
-└── preview-animation.gif
 ```
 
 ---
