@@ -1,6 +1,6 @@
 # PrimeSA_Bot — Session Generator (Animated README)
 
-[![Generate Pair Code](https://img.shields.io/badge/Generate%20Pair%20Code-Click%20Here-brightgreen?style=for-the-badge)]((https://primesa-bot-26.onrender.com)
+[![Generate Pair Code](https://img.shields.io/badge/Generate%20Pair%20Code-Click%20Here-brightgreen?style=for-the-badge)](https://primesa-bot-26.onrender.com)
 ))
 
 This README has been redesigned to showcase an animated preview and to use the new project naming: "PrimeSA_Bot" (internal name: `primesa_bot`). Replace the placeholder animation assets with your own files to get a live animated preview.
