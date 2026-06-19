@@ -1,88 +1,174 @@
-# PrimeSA_Bot — Session Generator (Animated README)
+# <div align="center">
 
-[![Generate Pair Code](https://img.shields.io/badge/Generate%20Pair%20Code-Click%20Here-brightgreen?style=for-the-badge)](https://primesa-bot-26.onrender.com)
-))
+<img src="logo.png" width="150" alt="PrimeSA_Bot">
 
-This README has been redesigned to showcase an animated preview and to use the new project naming: "PrimeSA_Bot" (internal name: `primesa_bot`). Replace the placeholder animation assets with your own files to get a live animated preview.
+# PrimeSA_Bot
+
+### ⚡ Fast • Secure • Reliable WhatsApp Multi-Device Session Generator
+
+<p align="center">
+Generate WhatsApp Pair Codes instantly with a modern, secure and lightweight web interface.
+</p>
+
+<p align="center">
+
+[![Generate Pair Code](https://img.shields.io/badge/Generate%20Pair%20Code-Online-success?style=for-the-badge)](https://primesa-bot-26.onrender.com)
+
+[![YouTube](https://img.shields.io/badge/YouTube-Professor%20Sahil-red?style=for-the-badge\&logo=youtube)](https://youtube.com/@professorsahil-m7q?si=qj6xxaxPEHEYVO8d)
+
+[![GitHub](https://img.shields.io/badge/GitHub-sahillume-black?style=for-the-badge\&logo=github)](https://github.com/sahillume)
+
+</p>
 
 ---
 
-Animated preview (local):
-
-- Add a short GIF named `preview-animation.gif` to the project root and it will be displayed here as the animated header.
-
-![Animated Preview](preview-animation.gif)
+<p align="center">
+<img src="preview-animation.gif" width="100%">
+</p>
 
 ---
 
-Quick Start
+# ✨ Features
 
-1) Create a Mega.nz account
-  [![MEGA - Create Account](https://img.shields.io/badge/MEGA-Create%20Account-red?logo=mega&logoColor=white)](https://mega.nz)
+✅ WhatsApp Multi Device Pairing
 
-2) Paste your credentials in `mega.js`
-  Open `mega.js` and update `email` and `password`:
+✅ QR Code Generation
+
+✅ Pair Code Support
+
+✅ Automatic Session Cleanup
+
+✅ Fast & Lightweight
+
+✅ Modern Responsive Interface
+
+✅ Render Deployment Ready
+
+✅ Open Source
+
+---
+
+# 🚀 Generate Pair Code
+
+Click below to generate your WhatsApp pairing code instantly.
+
+### 👇
+
+[![Generate Pair Code](https://img.shields.io/badge/CLICK%20HERE-Generate%20Pair%20Code-25D366?style=for-the-badge\&logo=whatsapp\&logoColor=white)](https://primesa-bot-26.onrender.com)
+
+---
+
+# 📥 Installation
+
+Clone the repository
+
+```bash
+git clone https://github.com/sahillume/PrimeSA_Bot-Pairing-Code.git
+```
+
+Open the project
+
+```bash
+cd PrimeSA_Bot-Pairing-Code
+```
+
+Install packages
+
+```bash
+npm install
+```
+
+Start the bot
+
+```bash
+npm start
+```
+
+---
+
+# ☁️ Deploy to Render
+
+Create a new **Web Service**
+
+Runtime
+
+```
+Node
+```
+
+Build Command
+
+```bash
+npm install
+```
+
+Start Command
+
+```bash
+npm start
+```
+
+Node Version
+
+```
+20+
+```
+
+---
+
+# 🔐 Mega Configuration
+
+Create a Mega account
+
+https://mega.nz
+
+Edit **mega.js**
 
 ```js
-// mega.js
 const auth = {
-  email: 'your-email@domain.com',
-  password: 'your-strong-password',
-  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.135 Safari/537.36 Edge/12.246'
-};
+  email: "YOUR_MEGA_EMAIL",
+  password: "YOUR_MEGA_PASSWORD"
+}
 ```
-
-3) Deploy to Render
-  [![Render - Deploy](https://img.shields.io/badge/Render-Deploy%20Web%20Service-46E3B7?logo=render&logoColor=white)](https://render.com)
-  - Push this project to your Git repository (GitHub/GitLab)
-  - On Render: New ➜ Web Service
-  - Environment: Node
-  - Runtime: Node 20
-  - Build Command: `npm install`
-  - Start Command: `npm start`
-  - Click Create Web Service
 
 ---
 
-Branding and animation examples
+# 📱 Preview
 
-Images (logo):
-- Place your `logo.png` in the project root. In `pair.html`, replace the logo block and use the updated alt/title for accessibility:
+| Desktop           | Mobile           |
+| ----------------- | ---------------- |
+| ✔ Responsive      | ✔ Responsive     |
+| ✔ Dark & Light UI | ✔ Touch Friendly |
+| ✔ Fast Loading    | ✔ Optimized      |
 
-```html
-<div class="logo">
-  <img src="logo.png" alt="PrimeSA_Bot" style="width:100%;height:100%;border-radius:50%" />
-</div>
-```
+---
 
-Animated header (simple CSS float)
-- Add this inside the `<style>` of `pair.html` to create a subtle floating animation for the logo. This gives the page a lightweight animated feel that reads well in the README preview when exported as a GIF.
+# 🛡 Why PrimeSA_Bot?
 
-```css
-@keyframes float {
-  0% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-  100% { transform: translateY(0); }
-}
-.logo { animation: float 2.4s ease-in-out infinite; }
-```
+PrimeSA_Bot is designed to provide a clean, secure and reliable WhatsApp Multi-Device pairing experience. The project focuses on speed, simplicity and stability while remaining easy to deploy and maintain.
 
-Lottie / advanced animations
-- For richer vector animations, export a Lottie JSON and use a small web player in `pair.html`. Convert a looped Lottie preview to `preview-animation.gif` for the README if you want the GitHub preview to show it inline.
+---
 
-Fonts
-- In the `<head>` of `pair.html`, add Google Fonts for Inter or any preferred font:
+# 📞 Support
 
-```html
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
-```
+If you encounter any issues or have suggestions, feel free to open an issue on GitHub or reach out through the YouTube channel.
 
-Notes
-- All occurrences of the old project name were updated in this document:
-  - "Mathithibala Bot" → "PrimeSA_Bot"
-  - `mathithibala-bot` → `primesa_bot`
+---
 
-If you want the README header to actually animate on GitHub, include an animated GIF (`preview-animation.gif`) in the repo root and it will render inline. Replace the placeholder GIF with your exported animation from the web preview.
+# ⭐ Support the Project
 
-Happy pairing! 🚀
+If you enjoy this project, please consider giving it a ⭐ on GitHub.
 
+It helps the project grow and motivates future updates.
+
+---
+
+<p align="center">
+
+Made with ❤️ for the WhatsApp Community
+
+<b>PrimeSA_Bot</b>
+
+© 2026 All Rights Reserved
+
+</p>
