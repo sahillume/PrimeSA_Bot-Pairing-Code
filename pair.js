@@ -1,186 +1,156 @@
 import express from 'express';
 import fs from 'fs';
+import { randomUUID } from 'crypto';
 import pino from 'pino';
-import { makeWASocket, useMultiFileAuthState, delay, makeCacheableSignalKeyStore, Browsers, jidNormalizedUser, fetchLatestBaileysVersion } from '@whiskeysockets/baileys';
+import jwt from 'jsonwebtoken';
+import { makeWASocket, useMultiFileAuthState, makeCacheableSignalKeyStore, Browsers, fetchLatestBaileysVersion, jidNormalizedUser } from '@whiskeysockets/baileys';
 import pn from 'awesome-phonenumber';
 
 const router = express.Router();
+const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
 
-// Ensure the session directory exists
-function removeFile(FilePath) {
-    try {
-        if (!fs.existsSync(FilePath)) return false;
-        fs.rmSync(FilePath, { recursive: true, force: true });
-    } catch (e) {
-        console.error('Error removing file:', e);
-    }
+const MAX_ACTIVE = parseInt(process.env.MAX_ACTIVE_SESSIONS) || 20;
+const PAIR_EXPIRES = parseInt(process.env.PAIR_EXPIRES) || 60; // seconds
+
+// map token -> { sock, dir, phone, timeout }
+const activeSessions = new Map();
+
+function safeRm(dir) {
+  try { if (fs.existsSync(dir)) fs.rmSync(dir, { recursive: true, force: true }); } catch (e) { logger.error({ err: e }, 'remove failed'); }
+}
+
+function verifyAdmin(req, res, next) {
+  try {
+    const token = req.cookies?.admin_token;
+    if (!token) return res.status(401).json({ error: 'Not authorized' });
+    const secret = process.env.ADMIN_SECRET || 'devsecret';
+    const decoded = jwt.verify(token, secret);
+    if (!decoded || !decoded.admin) return res.status(401).json({ error: 'Not authorized' });
+    next();
+  } catch (e) {
+    return res.status(401).json({ error: 'Not authorized' });
+  }
 }
 
 router.get('/', async (req, res) => {
-    let num = req.query.number;
-    let dirs = './' + (num || `session`);
+  const raw = req.query.number;
+  if (!raw) return res.status(400).json({ error: 'Phone number required' });
 
-    // Remove existing session if present
-    await removeFile(dirs);
+  // Validate phone
+  let num = String(raw).replace(/[^0-9+]/g, '');
+  const phone = pn(num.startsWith('+') ? num : '+' + num);
+  if (!phone.isValid()) return res.status(400).json({ error: 'Invalid phone number' });
+  num = phone.getNumber('e164').replace('+', '');
 
-    // Clean the phone number - remove any non-digit characters
-    num = num.replace(/[^0-9]/g, '');
+  if (activeSessions.size >= MAX_ACTIVE) return res.status(429).json({ error: 'Server busy. Try again later.' });
 
-    // Validate the phone number using awesome-phonenumber
-    const phone = pn('+' + num);
-    if (!phone.isValid()) {
-        if (!res.headersSent) {
-            return res.status(400).send({ code: 'Invalid phone number. Please enter your full international number (e.g., 15551234567 for US, 447911123456 for UK, 2783551XXXX for South Africa, etc.) without + or spaces.' });
-        }
-        return;
-    }
-    // Use the international number format (E.164, without '+')
-    num = phone.getNumber('e164').replace('+', '');
+  const token = randomUUID();
+  const dir = `./sessions/${token}`;
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
-    async function initiateSession() {
-        const { state, saveCreds } = await useMultiFileAuthState(dirs);
+  try {
+    const { state, saveCreds } = await useMultiFileAuthState(dir);
+    const { version } = await fetchLatestBaileysVersion();
 
-        try {
-            const { version, isLatest } = await fetchLatestBaileysVersion();
-            let PrimeSA_Bot = makeWASocket({
-                version,
-                auth: {
-                    creds: state.creds,
-                    keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }).child({ level: "fatal" })),
-                },
-                printQRInTerminal: false,
-                logger: pino({ level: "fatal" }).child({ level: "fatal" }),
-                browser: Browsers.windows('Chrome'),
-                markOnlineOnConnect: false,
-                generateHighQualityLinkPreview: false,
-                defaultQueryTimeoutMs: 60000,
-                connectTimeoutMs: 60000,
-                keepAliveIntervalMs: 30000,
-                retryRequestDelayMs: 250,
-                maxRetries: 5,
-            });
+    const socketConfig = {
+      version,
+      auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'fatal' }).child({ level: 'fatal' })) },
+      printQRInTerminal: false,
+      logger: pino({ level: 'silent' }),
+      browser: Browsers.windows('Chrome'),
+    };
 
-            PrimeSA_Bot.ev.on('connection.update', async (update) => {
-                const { connection, lastDisconnect, isNewLogin, isOnline } = update;
+    const createSocket = () => makeWASocket(socketConfig);
+    const sock = createSocket();
 
-                if (connection === 'open') {
-                    console.log("✅ Connected successfully!");
-                    console.log("📱 Sending session file to user...");
-                    
-                    try {
-                        // const knightbotstart = '120363161513685998@newsletter';
-                        // await KnightBot.newsletterFollow(knightbotstart)
-                        await delay(5000); // Reduced delay for better UX
-                        const sessionPrime = fs.readFileSync(dirs + '/creds.json');
+    // Save creds when updated
+    sock.ev.on('creds.update', saveCreds);
 
-                        // Send session file to user
-                        const userJid = jidNormalizedUser(num + '@s.whatsapp.net');
-                        await PrimeSA_Bot.sendMessage(userJid, {
-                            document: sessionPrime,
-                            mimetype: 'application/json',
-                            fileName: 'creds.json'
-                        });
-                        console.log("📄 PrimeSA-Session file sent completed");
+    // When paired (creds updated/registered) send token as text and cleanup
+    const onPaired = async () => {
+      try {
+        const j = jidNormalizedUser(num + '@s.whatsapp.net');
+        const msg = `✅ PrimeSA_Bot paired successfully.\nSession Token: ${token}\nDo NOT share this token.`;
+        try { await sock.sendMessage(j, { text: msg }); } catch (e) { logger.error({ err: e }, 'failed send token'); }
+      } finally {
+        // clear expiry timeout and cleanup after short delay
+        const info = activeSessions.get(token);
+        if (info && info.timeout) clearTimeout(info.timeout);
+        setTimeout(() => {
+          try { sock.ev.removeAllListeners(); } catch (e) {}
+          try { sock.end?.(); } catch (e) {}
+          activeSessions.delete(token);
+        }, 5000);
+      }
+    };
 
-                        // Send video thumbnail with caption
-                        await PrimeSA_Bot.sendMessage(userJid, {
-                            image: { url: 'https://youtube.com/@professorsahil-m7q?si=qj6xxaxPEHEYVO8d' },
-                            caption: `🎬 *PrimeSA_Bot MD V2.0 Full Setup Guide!*\n\n🚀 Bug Fixes + New Commands + Fast AI Chat\n📺 Watch Now: https://youtube.com/@professorsahil-m7q?si=qj6xxaxPEHEYVO8d`
-                        });
-                        console.log("🎬 Video guide sent successfully");
+    sock.ev.on('creds.update', onPaired);
 
-                        // Send warning message
-                        await PrimeSA_Bot.sendMessage(userJid, {
-                            text: `⚠️Do not share this file with anybody⚠️\n 
-┌┤✑  Thanks for using PrimeSA_Bot
-│└────────────┈ ⳹        
-│©2026 Professor Sahil 
-└─────────────────┈ ⳹\n\n`
-                        });
-                        console.log("⚠️ Warning message sent successfully");
+    // Register active session with expiry
+    const timeout = setTimeout(() => {
+      try {
+        logger.info({ token, num }, 'pairing expired; cleaning');
+        try { sock.ev.removeAllListeners(); } catch (e) {}
+        try { sock.end?.(); } catch (e) {}
+      } finally {
+        safeRm(dir);
+        activeSessions.delete(token);
+      }
+    }, PAIR_EXPIRES * 1000);
 
-                        // Clean up session after use
-                        console.log("🧹 Cleaning up session...");
-                        await delay(1000);
-                        removeFile(dirs);
-                        console.log("✅ Session cleaned up successfully");
-                        console.log("🎉 Prime Process completed successfully!");
-                        // Do not exit the process, just finish gracefully
-                    } catch (error) {
-                        console.error("❌ Error sending messages:", error);
-                        // Still clean up session even if sending fails
-                        removeFile(dirs);
-                        // Do not exit the process, just finish gracefully
-                    }
-                }
+    activeSessions.set(token, { sock, dir, phone: num, timeout });
 
-                if (isNewLogin) {
-                    console.log("🔐 New login via pair code");
-                }
+    // Request pairing code
+    const rawCode = await sock.requestPairingCode(num);
+    const pairingCode = rawCode?.match(/.{1,4}/g)?.join('-') || rawCode;
 
-                if (isOnline) {
-                    console.log("📶 Client is online");
-                }
+    if (!res.headersSent) return res.json({ success: true, pairingCode, token, expiresIn: PAIR_EXPIRES });
 
-                if (connection === 'close') {
-                    const statusCode = lastDisconnect?.error?.output?.statusCode;
-
-                    if (statusCode === 401) {
-                        console.log("❌ Logged out from WhatsApp. Need to generate new pair code.");
-                    } else {
-                        console.log("🔁 Connection closed — restarting...");
-                        initiateSession();
-                    }
-                }
-            });
-
-            if (!PrimeSA_Bot.authState.creds.registered) {
-                await delay(3000); // Wait 3 seconds before requesting pairing code
-                num = num.replace(/[^\d+]/g, '');
-                if (num.startsWith('+')) num = num.substring(1);
-
-                try {
-                    let code = await PrimeSA_Bot.requestPairingCode(num);
-                    code = code?.match(/.{1,4}/g)?.join('-') || code;
-                    if (!res.headersSent) {
-                        console.log({ num, code });
-                        await res.send({ code });
-                    }
-                } catch (error) {
-                    console.error('Error requesting pairing code:', error);
-                    if (!res.headersSent) {
-                        res.status(503).send({ code: 'Failed to get pairing code. Please check your phone number and try again.' });
-                    }
-                }
-            }
-
-            PrimeSA_Bot.ev.on('creds.update', saveCreds);
-        } catch (err) {
-            console.error('Error initializing session:', err);
-            if (!res.headersSent) {
-                res.status(503).send({ code: 'Service Unavailable' });
-            }
-        }
-    }
-
-    await initiateSession();
+  } catch (err) {
+    logger.error({ err }, 'pair generation failed');
+    safeRm(dir);
+    if (!res.headersSent) return res.status(500).json({ error: 'Failed to generate pairing code' });
+  }
 });
 
-// Global uncaught exception handler
-process.on('uncaughtException', (err) => {
-    let e = String(err);
-    if (e.includes("conflict")) return;
-    if (e.includes("not-authorized")) return;
-    if (e.includes("Socket connection timeout")) return;
-    if (e.includes("rate-overlimit")) return;
-    if (e.includes("Connection Closed")) return;
-    if (e.includes("Timed Out")) return;
-    if (e.includes("Value not found")) return;
-    if (e.includes("Stream Errored")) return;
-    if (e.includes("Stream Errored (restart required)")) return;
-    if (e.includes("statusCode: 515")) return;
-    if (e.includes("statusCode: 503")) return;
-    console.log('Caught exception: ', err);
+// Admin-only endpoint to list active sessions
+router.get('/_active', verifyAdmin, (req, res) => {
+  const out = [];
+  for (const [token, info] of activeSessions.entries()) out.push({ token, phone: info.phone });
+  res.json({ active: out });
+});
+
+// Admin-only: download creds (creds.json) for a token
+router.get('/download/:token', verifyAdmin, (req, res) => {
+  const token = req.params.token;
+  const info = activeSessions.get(token);
+  const dir = info ? info.dir : `./sessions/${token}`;
+  const credsPath = `${dir}/creds.json`;
+  if (!fs.existsSync(credsPath)) return res.status(404).json({ error: 'creds not found' });
+  try {
+    const data = fs.readFileSync(credsPath, 'utf8');
+    res.setHeader('Content-Type', 'application/json');
+    res.send(data);
+  } catch (e) {
+    res.status(500).json({ error: 'failed to read creds' });
+  }
+});
+
+// Admin-only: revoke / delete a token session
+router.delete('/:token', verifyAdmin, (req, res) => {
+  const token = req.params.token;
+  const info = activeSessions.get(token);
+  if (info) {
+    try { if (info.timeout) clearTimeout(info.timeout); } catch (e) {}
+    try { info.sock.ev.removeAllListeners(); info.sock.end?.(); } catch (e) {}
+    safeRm(info.dir);
+    activeSessions.delete(token);
+    return res.json({ ok: true });
+  }
+  // if not active, try to remove from disk
+  const dir = `./sessions/${token}`;
+  if (fs.existsSync(dir)) { safeRm(dir); return res.json({ ok: true }); }
+  return res.status(404).json({ error: 'token not found' });
 });
 
 export default router;
