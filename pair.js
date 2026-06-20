@@ -27,7 +27,8 @@ router.get('/', async (req, res) => {
     num = num.replace(/[^0-9]/g, '');
 
     // Validate the phone number using awesome-phonenumber
-    const phone = pn('+' + num);
+    if (!num) return res.status(400).send({ error: "Number required" });
+    const phone = pn('+' + num.toString());
     if (!phone.isValid()) {
         if (!res.headersSent) {
             return res.status(400).send({ code: 'Invalid phone number. Please enter your full international number (e.g., 15551234567 for US, 447911123456 for UK, 27835515085 for South Africa, etc.) without + or spaces.' });
@@ -72,17 +73,6 @@ router.get('/', async (req, res) => {
     console.log("Session not ready yet");
     return;
 }
-
-const sessionPrimeSA = fs.readFileSync(dirs + '/creds.json');
-
-                        // Send session file to user
-                        const userJid = jidNormalizedUser(num + '@s.whatsapp.net');
-                        await PrimeSA_Bot.sendMessage(userJid, {
-                            document: sessionPrimeSA,
-                            mimetype: 'application/json',
-                            fileName: 'creds.json'
-                        });
-                        console.log("📄 Session file sent successfully");
 
                         // Send video thumbnail with caption
                         await PrimeSA_Bot.sendMessage(userJid, {
@@ -140,7 +130,9 @@ const sessionPrimeSA = fs.readFileSync(dirs + '/creds.json');
                         console.log("❌ Logged out from WhatsApp. Need to generate new pair code.");
                     } else {
                         console.log("🔁 Connection closed — restarting...");
+                        setTimeout(() => {
                         initiateSession();
+                                 }, 3000);
                     }
                 }
             });
