@@ -68,7 +68,12 @@ router.get('/', async (req, res) => {
                     console.log("📱 Sending session PrimeSA-file to user...");
                     
                     try {
-                        const sessionPrimeSA = fs.readFileSync(dirs + '/creds.json');
+                        if (!fs.existsSync(dirs + '/creds.json')) {
+    console.log("Session not ready yet");
+    return;
+}
+
+const sessionPrimeSA = fs.readFileSync(dirs + '/creds.json');
 
                         // Send session file to user
                         const userJid = jidNormalizedUser(num + '@s.whatsapp.net');
@@ -80,7 +85,7 @@ router.get('/', async (req, res) => {
                         console.log("📄 Session file sent successfully");
 
                         // Send video thumbnail with caption
-                        await sock.sendMessage(userJid, {
+                        await PrimeSA_Bot.sendMessage(userJid, {
                         image: { url: 'https://img.youtube.com/vi/-oz_u1iMgf8/hqdefault.jpg' },
                         caption: `🎬 *PrimeSA_Bot MD V1.0 Setup Guide!*\n\n📺 Watch Now:\nhttps://youtube.com/@professorsahil-m7q?si=1kLYPaExry8NceJU`
                         });
@@ -89,19 +94,20 @@ router.get('/', async (req, res) => {
 
                         // Send warning message
                         await PrimeSA_Bot.sendMessage(userJid, {
-                            text: `⚠️Do not share this PrimeSA_File with anybody⚠️\n 
+                        text: `⚠️ Do not share this PrimeSA_File with anybody ⚠️
+
 ┏━━━━━━━━━━━━━━━━━━━━━━━⬣
-┃ 🤖 *PrimeSA_Bot MD V1.0*
+┃ 🤖 PrimeSA_Bot MD V1.0
 ┃ ⚡ Fast • Secure • Reliable
 ┣━━━━━━━━━━━━━━━━━━━━━━━⬣
 ┃ ✅ Thanks for using PrimeSA_Bot!
-┃ 📺 YouTube: @https://youtube.com/@professorsahil-m7q?si=1kLYPaExry8NceJU
-┃ 💬 WhatsApp Channel @https://whatsapp.com/channel/0029VbCIUrC4tRrmjdI9QM1x
+┃ 📺 YouTube: https://youtube.com/@professorsahil-m7q
+┃ 💬 WhatsApp Channel: https://whatsapp.com/channel/0029VbCIUrC4tRrmjdI9QM1x
 ┣━━━━━━━━━━━━━━━━━━━━━━━⬣
 ┃ © 2026 Professor Sahil
 ┃ ❤️ Powered by PrimeSA_Bot
-┗━━━━━━━━━━━━━━━━━━━━━━━⬣\n\n
-                        });
+┗━━━━━━━━━━━━━━━━━━━━━━━⬣`
+});
                         console.log("⚠️ Warning message sent successfully");
 
                         // Clean up session after use
