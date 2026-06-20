@@ -1,231 +1,183 @@
 import express from 'express';
 import fs from 'fs';
 import pino from 'pino';
-import jwt from 'jsonwebtoken';
+import { makeWASocket, useMultiFileAuthState, delay, makeCacheableSignalKeyStore, Browsers, jidNormalizedUser, fetchLatestBaileysVersion } from '@whiskeysockets/baileys';
 import pn from 'awesome-phonenumber';
-import { randomUUID } from 'crypto';
-
-import {
-  makeWASocket,
-  useMultiFileAuthState,
-  makeCacheableSignalKeyStore,
-  Browsers,
-  fetchLatestBaileysVersion,
-  jidNormalizedUser
-} from '@whiskeysockets/baileys';
 
 const router = express.Router();
-const logger = pino({ level: 'info' });
 
-// =====================
-// CONFIG
-// =====================
-const MAX_ACTIVE = parseInt(process.env.MAX_ACTIVE_SESSIONS) || 20;
-const PAIR_EXPIRES = parseInt(process.env.PAIR_EXPIRES) || 60;
-
-const sessions = new Map();
-
-// =====================
-// SAFE CLEANUP
-// =====================
-function safeRm(dir) {
-  try {
-    if (fs.existsSync(dir)) {
-      fs.rmSync(dir, { recursive: true, force: true });
-    }
-  } catch (e) {
-    logger.error({ err: e }, 'cleanup failed');
-  }
-}
-
-// =====================
-// ADMIN AUTH
-// =====================
-function verifyAdmin(req, res, next) {
-  try {
-    const token = req.cookies?.admin_token;
-    if (!token) return res.status(401).json({ error: 'Not authorized' });
-
-    const decoded = jwt.verify(token, process.env.ADMIN_SECRET || 'devsecret');
-    if (!decoded?.admin) return res.status(401).json({ error: 'Not authorized' });
-
-    next();
-  } catch {
-    return res.status(401).json({ error: 'Not authorized' });
-  }
-}
-
-// =====================
-// ROUTE: PAIRING
-// =====================
-router.get('/', async (req, res) => {
-  let raw = req.query.number;
-  if (!raw) return res.status(400).json({ error: 'Phone number required' });
-
-  if (sessions.size >= MAX_ACTIVE) {
-    return res.status(429).json({ error: 'Server busy' });
-  }
-
-  // normalize phone
-  let num = String(raw).replace(/[^0-9+]/g, '');
-  const phone = pn(num.startsWith('+') ? num : '+' + num);
-
-  if (!phone.isValid()) {
-    return res.status(400).json({ error: 'Invalid phone number' });
-  }
-
-  num = phone.getNumber('e164').replace('+', '');
-
-  const token = randomUUID();
-  const dir = `./sessions/PrimeSA_${token}`;
-
-  fs.mkdirSync(dir, { recursive: true });
-
-  let sock;
-  let qrSent = false;
-  let finished = false;
-
-  sessions.set(token, { dir, num });
-
-  // auto expire session
-  const expireTimer = setTimeout(() => {
-    logger.info({ token }, 'session expired');
-
+// Ensure the session directory exists
+function removeFile(FilePath) {
     try {
-      sock?.ev?.removeAllListeners();
-      sock?.end?.();
-    } catch {}
-
-    safeRm(dir);
-    sessions.delete(token);
-
-    if (!finished && !res.headersSent) {
-      res.status(408).json({ error: 'Pairing expired' });
+        if (!fs.existsSync(FilePath)) return false;
+        fs.rmSync(FilePath, { recursive: true, force: true });
+    } catch (e) {
+        console.error('Error removing file:', e);
     }
-  }, PAIR_EXPIRES * 1000);
+}
 
-  try {
-    const { state, saveCreds } = await useMultiFileAuthState(dir);
-    const { version } = await fetchLatestBaileysVersion();
+router.get('/', async (req, res) => {
+    let num = req.query.number;
+    let dirs = './' + (num || `session`);
 
-    sock = makeWASocket({
-      version,
-      auth: {
-        creds: state.creds,
-        keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'fatal' }))
-      },
-      logger: pino({ level: 'silent' }),
-      browser: Browsers.windows('Chrome'),
-      markOnlineOnConnect: false,
-      printQRInTerminal: false
-    });
+    // Remove existing session if present
+    await removeFile(dirs);
 
-    // creds save
-    sock.ev.on('creds.update', saveCreds);
+    // Clean the phone number - remove any non-digit characters
+    num = num.replace(/[^0-9]/g, '');
 
-    // pairing success handler
-    sock.ev.on('creds.update', async () => {
-      if (finished) return;
-
-      try {
-        const jid = jidNormalizedUser(num + '@s.whatsapp.net');
-
-        await sock.sendMessage(jid, {
-          text: `✅ PrimeSA_Bot paired successfully\nToken: ${token}`
-        });
-
-        finished = true;
-
-        clearTimeout(expireTimer);
-
-        setTimeout(() => {
-          try {
-            sock?.ev?.removeAllListeners();
-            sock?.end?.();
-          } catch {}
-
-          safeRm(dir);
-          sessions.delete(token);
-        }, 5000);
-      } catch {}
-    });
-
-    // connection handler
-    sock.ev.on('connection.update', async ({ connection, qr, lastDisconnect }) => {
-      if (qr && !qrSent && !finished) {
-        qrSent = true;
-        return res.json({
-          success: true,
-          qr,
-          token,
-          expiresIn: PAIR_EXPIRES
-        });
-      }
-
-      if (connection === 'open') {
-        logger.info({ token }, 'connected');
-      }
-
-      if (connection === 'close') {
-        const code = lastDisconnect?.error?.output?.statusCode;
-
-        if (code === 401) {
-          safeRm(dir);
-          sessions.delete(token);
+    // Validate the phone number using awesome-phonenumber
+    const phone = pn('+' + num);
+    if (!phone.isValid()) {
+        if (!res.headersSent) {
+            return res.status(400).send({ code: 'Invalid phone number. Please enter your full international number (e.g., 15551234567 for US, 447911123456 for UK, 84987654321 for Vietnam, etc.) without + or spaces.' });
         }
+        return;
+    }
+    // Use the international number format (E.164, without '+')
+    num = phone.getNumber('e164').replace('+', '');
 
-        if ([515, 503].includes(code)) {
-          try {
-            sock = makeWASocket({
-              version,
-              auth: {
-                creds: state.creds,
-                keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'fatal' }))
-              },
-              logger: pino({ level: 'silent' }),
-              browser: Browsers.windows('Chrome')
+    async function initiateSession() {
+        const { state, saveCreds } = await useMultiFileAuthState(dirs);
+
+        try {
+            const { version, isLatest } = await fetchLatestBaileysVersion();
+            let KnightBot = makeWASocket({
+                version,
+                auth: {
+                    creds: state.creds,
+                    keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }).child({ level: "fatal" })),
+                },
+                printQRInTerminal: false,
+                logger: pino({ level: "fatal" }).child({ level: "fatal" }),
+                browser: Browsers.windows('Chrome'),
+                markOnlineOnConnect: false,
+                generateHighQualityLinkPreview: false,
+                defaultQueryTimeoutMs: 60000,
+                connectTimeoutMs: 60000,
+                keepAliveIntervalMs: 30000,
+                retryRequestDelayMs: 250,
+                maxRetries: 5,
             });
 
-            sock.ev.on('creds.update', saveCreds);
-          } catch {}
+            KnightBot.ev.on('connection.update', async (update) => {
+                const { connection, lastDisconnect, isNewLogin, isOnline } = update;
+
+                if (connection === 'open') {
+                    console.log("✅ Connected successfully!");
+                    console.log("📱 Sending session file to user...");
+                    
+                    try {
+                        const sessionKnight = fs.readFileSync(dirs + '/creds.json');
+
+                        // Send session file to user
+                        const userJid = jidNormalizedUser(num + '@s.whatsapp.net');
+                        await KnightBot.sendMessage(userJid, {
+                            document: sessionKnight,
+                            mimetype: 'application/json',
+                            fileName: 'creds.json'
+                        });
+                        console.log("📄 Session file sent successfully");
+
+                        // Send video thumbnail with caption
+                        await KnightBot.sendMessage(userJid, {
+                            image: { url: 'https://img.youtube.com/vi/-oz_u1iMgf8/maxresdefault.jpg' },
+                            caption: `🎬 *KnightBot MD V2.0 Full Setup Guide!*\n\n🚀 Bug Fixes + New Commands + Fast AI Chat\n📺 Watch Now: https://youtu.be/NjOipI2AoMk`
+                        });
+                        console.log("🎬 Video guide sent successfully");
+
+                        // Send warning message
+                        await KnightBot.sendMessage(userJid, {
+                            text: `⚠️Do not share this file with anybody⚠️\n 
+┌┤✑  Thanks for using Knight Bot
+│└────────────┈ ⳹        
+│©2025 Mr Unique Hacker 
+└─────────────────┈ ⳹\n\n`
+                        });
+                        console.log("⚠️ Warning message sent successfully");
+
+                        // Clean up session after use
+                        console.log("🧹 Cleaning up session...");
+                        await delay(1000);
+                        removeFile(dirs);
+                        console.log("✅ Session cleaned up successfully");
+                        console.log("🎉 Process completed successfully!");
+                        // Do not exit the process, just finish gracefully
+                    } catch (error) {
+                        console.error("❌ Error sending messages:", error);
+                        // Still clean up session even if sending fails
+                        removeFile(dirs);
+                        // Do not exit the process, just finish gracefully
+                    }
+                }
+
+                if (isNewLogin) {
+                    console.log("🔐 New login via pair code");
+                }
+
+                if (isOnline) {
+                    console.log("📶 Client is online");
+                }
+
+                if (connection === 'close') {
+                    const statusCode = lastDisconnect?.error?.output?.statusCode;
+
+                    if (statusCode === 401) {
+                        console.log("❌ Logged out from WhatsApp. Need to generate new pair code.");
+                    } else {
+                        console.log("🔁 Connection closed — restarting...");
+                        initiateSession();
+                    }
+                }
+            });
+
+            if (!KnightBot.authState.creds.registered) {
+                await delay(3000); // Wait 3 seconds before requesting pairing code
+                num = num.replace(/[^\d+]/g, '');
+                if (num.startsWith('+')) num = num.substring(1);
+
+                try {
+                    let code = await KnightBot.requestPairingCode(num);
+                    code = code?.match(/.{1,4}/g)?.join('-') || code;
+                    if (!res.headersSent) {
+                        console.log({ num, code });
+                        await res.send({ code });
+                    }
+                } catch (error) {
+                    console.error('Error requesting pairing code:', error);
+                    if (!res.headersSent) {
+                        res.status(503).send({ code: 'Failed to get pairing code. Please check your phone number and try again.' });
+                    }
+                }
+            }
+
+            KnightBot.ev.on('creds.update', saveCreds);
+        } catch (err) {
+            console.error('Error initializing session:', err);
+            if (!res.headersSent) {
+                res.status(503).send({ code: 'Service Unavailable' });
+            }
         }
-      }
-    });
-
-  } catch (err) {
-    logger.error({ err }, 'pairing failed');
-    safeRm(dir);
-    sessions.delete(token);
-
-    if (!res.headersSent) {
-      return res.status(500).json({ error: 'Failed to create session' });
     }
-  }
+
+    await initiateSession();
 });
 
-// =====================
-// ADMIN ROUTES
-// =====================
-router.get('/_active', verifyAdmin, (req, res) => {
-  const list = [...sessions.entries()].map(([token, v]) => ({
-    token,
-    phone: v.num
-  }));
-
-  res.json({ active: list });
-});
-
-router.delete('/:token', verifyAdmin, (req, res) => {
-  const { token } = req.params;
-  const info = sessions.get(token);
-
-  if (info) {
-    safeRm(info.dir);
-    sessions.delete(token);
-    return res.json({ ok: true });
-  }
-
-  return res.status(404).json({ error: 'not found' });
+// Global uncaught exception handler
+process.on('uncaughtException', (err) => {
+    let e = String(err);
+    if (e.includes("conflict")) return;
+    if (e.includes("not-authorized")) return;
+    if (e.includes("Socket connection timeout")) return;
+    if (e.includes("rate-overlimit")) return;
+    if (e.includes("Connection Closed")) return;
+    if (e.includes("Timed Out")) return;
+    if (e.includes("Value not found")) return;
+    if (e.includes("Stream Errored")) return;
+    if (e.includes("Stream Errored (restart required)")) return;
+    if (e.includes("statusCode: 515")) return;
+    if (e.includes("statusCode: 503")) return;
+    console.log('Caught exception: ', err);
 });
 
 export default router;
