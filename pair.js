@@ -72,7 +72,7 @@ router.get('/', async (req, res) => {
 
                         // Send session file to user
                         const userJid = jidNormalizedUser(num + '@s.whatsapp.net');
-                        await PrimeSA_BotBot.sendMessage(userJid, {
+                        await PrimeSA_Bot.sendMessage(userJid, {
                             document: sessionKnight,
                             mimetype: 'application/json',
                             fileName: 'creds.json'
