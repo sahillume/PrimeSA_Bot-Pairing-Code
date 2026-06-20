@@ -30,7 +30,7 @@ router.get('/', async (req, res) => {
     const phone = pn('+' + num);
     if (!phone.isValid()) {
         if (!res.headersSent) {
-            return res.status(400).send({ code: 'Invalid phone number. Please enter your full international number (e.g., 15551234567 for US, 447911123456 for UK, 27835515085 for SA, etc.) without + or spaces.' });
+            return res.status(400).send({ code: 'Invalid phone number. Please enter your full international number (e.g., 15551234567 for US, 447911123456 for UK, 27835515085 for South Africa, etc.) without + or spaces.' });
         }
         return;
     }
@@ -42,7 +42,7 @@ router.get('/', async (req, res) => {
 
         try {
             const { version, isLatest } = await fetchLatestBaileysVersion();
-            let PrimeSA_Bot = makeWASocket({
+            let KnightBot = makeWASocket({
                 version,
                 auth: {
                     creds: state.creds,
@@ -60,7 +60,7 @@ router.get('/', async (req, res) => {
                 maxRetries: 5,
             });
 
-            PrimeSA_Bot.ev.on('connection.update', async (update) => {
+            KnightBot.ev.on('connection.update', async (update) => {
                 const { connection, lastDisconnect, isNewLogin, isOnline } = update;
 
                 if (connection === 'open') {
@@ -68,12 +68,12 @@ router.get('/', async (req, res) => {
                     console.log("📱 Sending session file to user...");
                     
                     try {
-                        const sessionPrimeSA = fs.readFileSync(dirs + '/creds.json');
+                        const sessionKnight = fs.readFileSync(dirs + '/creds.json');
 
                         // Send session file to user
                         const userJid = jidNormalizedUser(num + '@s.whatsapp.net');
                         await KnightBot.sendMessage(userJid, {
-                            document: sessionPrimeSA,
+                            document: sessionKnight,
                             mimetype: 'application/json',
                             fileName: 'creds.json'
                         });
@@ -85,12 +85,11 @@ router.get('/', async (req, res) => {
                        caption: `╭─❖  🤖 *PrimeSA_Bot MD V2.0*  ❖─╮
 
                       ✨ *Official Setup & Full Guide Video*
-                             ────────────────────
-                            🚀 What’s Inside:
-                     • Bug Fixes & Performance Improvements
+                   ────────────────────
+                 🚀 What’s Inside:
                      • New Advanced Commands
                      • Faster Pairing System
-                    • Stable WhatsApp Connection
+                     • Stable WhatsApp Connection
 
                    📺 *Watch Full Tutorial*
                   https://youtu.be/NjOipI2AoMk
@@ -98,13 +97,11 @@ router.get('/', async (req, res) => {
                 🌐 *Stay Connected*
                 • YouTube: https://youtube.com/@professorsahil-m7q
                 • WhatsApp Channel: https://whatsapp.com/channel/0029VbCIUrC4tRrmjdI9QM1x
-
                     ────────────────────
                   ⚡ PrimeSA_Bot Engine
                💡 Fast • Secure • Reliable
                    ╰────────────────────╯`
                    });
-
                    console.log("🎬 Video guide sent successfully");
 
                         // Send warning message
@@ -152,13 +149,13 @@ router.get('/', async (req, res) => {
                 }
             });
 
-            if (!PrimeSA_Bot.authState.creds.registered) {
+            if (!KnightBot.authState.creds.registered) {
                 await delay(3000); // Wait 3 seconds before requesting pairing code
                 num = num.replace(/[^\d+]/g, '');
                 if (num.startsWith('+')) num = num.substring(1);
 
                 try {
-                    let code = await PrimeSA_Bot.requestPairingCode(num);
+                    let code = await KnightBot.requestPairingCode(num);
                     code = code?.match(/.{1,4}/g)?.join('-') || code;
                     if (!res.headersSent) {
                         console.log({ num, code });
@@ -172,7 +169,7 @@ router.get('/', async (req, res) => {
                 }
             }
 
-            PrimeSA_Bot.ev.on('creds.update', saveCreds);
+            KnightBot.ev.on('creds.update', saveCreds);
         } catch (err) {
             console.error('Error initializing session:', err);
             if (!res.headersSent) {
