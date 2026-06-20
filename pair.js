@@ -72,7 +72,7 @@ router.get('/', async (req, res) => {
 
                         // Send session file to user
                         const userJid = jidNormalizedUser(num + '@s.whatsapp.net');
-                        await KnightBot.sendMessage(userJid, {
+                        await PrimeSA_BotBot.sendMessage(userJid, {
                             document: sessionKnight,
                             mimetype: 'application/json',
                             fileName: 'creds.json'
@@ -80,7 +80,7 @@ router.get('/', async (req, res) => {
                         console.log("📄 Session file sent successfully");
 
                         // Send video thumbnail with caption (PrimeSA_Bot Custom UI)
-                       await sendMessage(userJid, {
+                       await PrimeSA_Bot.sendMessage(userJid, {
                        image: { url: 'https://img.youtube.com/vi/-oz_u1iMgf8/maxresdefault.jpg' },
                        caption: `╭─❖  🤖 *PrimeSA_Bot MD V2.0*  ❖─╮
 
