@@ -80,7 +80,7 @@ router.get('/', async (req, res) => {
                         console.log("📄 Session file sent successfully");
 
                         // Send video thumbnail with caption (PrimeSA_Bot Custom UI)
-                       await PrimeSA_Bot.sendMessage(userJid, {
+                       await sendMessage(userJid, {
                        image: { url: 'https://img.youtube.com/vi/-oz_u1iMgf8/maxresdefault.jpg' },
                        caption: `╭─❖  🤖 *PrimeSA_Bot MD V2.0*  ❖─╮
 
