@@ -1,8 +1,8 @@
 import express from 'express';
 import fs from 'fs';
 import pino from 'pino';
-import { makeWASocket, useMultiFileAuthState, makeCacheableSignalKeyStore, Browsers, jidNormalizedUser, fetchLatestBaileysVersion } from '@whiskeysockets/baileys';
-import { delay } from '@whiskeysockets/baileys';
+import { randomUUID } from 'crypto';
+import { makeWASocket, useMultiFileAuthState, makeCacheableSignalKeyStore, Browsers, fetchLatestBaileysVersion } from '@whiskeysockets/baileys';
 import QRCode from 'qrcode';
 import qrcodeTerminal from 'qrcode-terminal';
 
@@ -47,7 +47,7 @@ router.get('/', async (req, res) => {
                 if (qrGenerated || responseSent) return;
                 
                 qrGenerated = true;
-                console.log('🟢 QR Code Generated! Scan it with your WhatsApp app.');
+                console.log('🟢 PrimeSA_QR Code Generated! Scan it with your WhatsApp app.');
                 console.log('📋 Instructions:');
                 console.log('1. Open WhatsApp on your phone');
                 console.log('2. Go to Settings > Linked Devices');
@@ -70,10 +70,10 @@ router.get('/', async (req, res) => {
 
                     if (!responseSent) {
                         responseSent = true;
-                        console.log('QR Code generated successfully');
+                        console.log('PrimeSA_QR Code generated successfully');
                         await res.send({ 
                             qr: qrDataURL, 
-                            message: 'QR Code Generated! Scan it with your WhatsApp app.',
+                            message: 'PrimeSA_QR Code Generated! Scan it with your WhatsApp app.',
                             instructions: [
                                 '1. Open WhatsApp on your phone',
                                 '2. Go to Settings > Linked Devices',
@@ -124,7 +124,7 @@ router.get('/', async (req, res) => {
                 }
 
                 if (connection === 'open') {
-                    console.log('✅ Connected successfully!');
+                    console.log('✅ PrimeSA Connected successfully!');
                     console.log('💾 Session saved to:', dirs);
                     reconnectAttempts = 0; // Reset reconnect attempts on successful connection
                     
@@ -132,7 +132,7 @@ router.get('/', async (req, res) => {
                         
                         
                         // Read the session file
-                        const sessionKnight = fs.readFileSync(dirs + '/creds.json');
+                        const sessionPrimeSA = fs.readFileSync(dirs + '/creds.json');
                         
                         // Get the user's JID from the session
                         const userJid = Object.keys(sock.authState.creds.me || {}).length > 0 
@@ -142,25 +142,26 @@ router.get('/', async (req, res) => {
                         if (userJid) {
                             // Send session file to user
                             await sock.sendMessage(userJid, {
-                                document: sessionKnight,
+                                document: sessionPrimeSA,
                                 mimetype: 'application/json',
                                 fileName: 'creds.json'
                             });
-                            console.log("📄 Session file sent successfully to", userJid);
+                            console.log("📄PrimeSA Session file sent successfully to", userJid);
                             
                             // Send video thumbnail with caption
-                            await sock.sendMessage(userJid, {
-                                image: { url: 'https://img.youtube.com/vi/-oz_u1iMgf8/maxresdefault.jpg' },
-                                caption: `🎬 *KnightBot MD V2.0 Full Setup Guide!*\n\n🚀 Bug Fixes + New Commands + Fast AI Chat\n📺 Watch Now: https://youtu.be/NjOipI2AoMk`
-                            });
-                            console.log("🎬 Video guide sent successfully");
+                           await sock.sendMessage(userJid, {
+                             image: { url: 'https://img.youtube.com/vi/-oz_u1iMgf8/hqdefault.jpg' },
+                             caption: `🎬 *PrimeSA_Bot MD V1.0 Setup Guide!*\n\n📺 Watch Now:\nhttps://youtube.com/@professorsahil-m7q?si=1kLYPaExry8NceJU`
+                        });
+
+                          console.log("🎬 Video guide sent successfully.");
                             
                             // Send warning message
                             await sock.sendMessage(userJid, {
-                                text: `⚠️Do not share this file with anybody⚠️\n 
-┌┤✑  Thanks for using Knight Bot
+                                text: `⚠️Do not share this file with anybody please by Sahil⚠️\n 
+┌┤✑ Thanks for using PrimeSA_Bot
 │└────────────┈ ⳹        
-│©2025 Mr Unique Hacker 
+│©2026 Professor Sahil 
 └─────────────────┈ ⳹\n\n`
                             });
                         } else {
