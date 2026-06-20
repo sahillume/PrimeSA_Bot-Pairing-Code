@@ -425,7 +425,7 @@ button:hover{
     </div>
 
     <div class="code-display" id="codeDisplay">
-      Your pair code will appear here
+      Your PrimeSA_Pair code will appear here
     </div>
 
     <div class="qr-display" id="qrDisplay">
@@ -435,18 +435,19 @@ button:hover{
       </div>
     </div>
 
-    <button class="copy-btn" id="copy" onclick="copyCode()">
-      <i class="fas fa-copy"></i> Copy Code
-    </button>
-
     <div class="footer">
-      <p>© 2025 Professor Sahil | PrimeSA_Bot</p>
+      <p>© 2026 Professor Sahil | PrimeSA_Bot</p>
     </div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.0.0-alpha.1/axios.min.js"></script>
   <script>
     let currentMode = 'pair';
+    document.getElementById("mobileNumber").addEventListener("keypress", function(e){
+    if(e.key === "Enter"){
+        document.getElementById("submit").click();
+    }
+});
 
     // Toggle functionality
     document.querySelectorAll('.toggle-option').forEach(option => {
@@ -694,7 +695,7 @@ button:hover{
       } catch (e) {}
     }
     adminBtn?.addEventListener('click', async () => {
-      const pass = prompt('Enter admin password:');
+      const pass = prompt('Enter sahil password:');
       if (!pass) return;
       try {
         const r = await fetch('/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pass }) });
@@ -750,6 +751,9 @@ button:hover{
     document.head.appendChild(styleExtra);
 
     // Clean up on unload
+    window.onload = () => {
+    document.getElementById("mobileNumber").focus();
+};
     window.addEventListener('beforeunload', () => { stopQRRefresh(); });
   </script>
 <footer style="text-align:center;margin-top:25px;color:#666;font-size:13px;">
