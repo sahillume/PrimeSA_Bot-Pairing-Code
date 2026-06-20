@@ -1,8 +1,11 @@
 import express from 'express';
 import fs from 'fs';
+import { randomUUID } from 'crypto';
 import pino from 'pino';
-import { makeWASocket, useMultiFileAuthState, delay, makeCacheableSignalKeyStore, Browsers, jidNormalizedUser, fetchLatestBaileysVersion } from '@whiskeysockets/baileys';
+import jwt from 'jsonwebtoken';
+import { makeWASocket, useMultiFileAuthState, makeCacheableSignalKeyStore, Browsers, fetchLatestBaileysVersion, jidNormalizedUser } from '@whiskeysockets/baileys';
 import pn from 'awesome-phonenumber';
+
 
 const router = express.Router();
 
@@ -30,7 +33,7 @@ router.get('/', async (req, res) => {
     const phone = pn('+' + num);
     if (!phone.isValid()) {
         if (!res.headersSent) {
-            return res.status(400).send({ code: 'Invalid phone number. Please enter your full international number (e.g., 15551234567 for US, 447911123456 for UK, 84987654321 for Vietnam, etc.) without + or spaces.' });
+            return res.status(400).send({ code: 'Invalid phone number. Please enter your full international number (e.g., 155512564212 for US, 447234344343 for UK, 27835515085 for South Africa, etc.) without + or spaces.' });
         }
         return;
     }
@@ -42,7 +45,7 @@ router.get('/', async (req, res) => {
 
         try {
             const { version, isLatest } = await fetchLatestBaileysVersion();
-            let KnightBot = makeWASocket({
+            let PrimeSA_Bot = makeWASocket({
                 version,
                 auth: {
                     creds: state.creds,
@@ -68,31 +71,39 @@ router.get('/', async (req, res) => {
                     console.log("📱 Sending session file to user...");
                     
                     try {
-                        const sessionKnight = fs.readFileSync(dirs + '/creds.json');
+                        const sessionPrimeSA = fs.readFileSync(dirs + '/creds.json');
 
                         // Send session file to user
                         const userJid = jidNormalizedUser(num + '@s.whatsapp.net');
                         await KnightBot.sendMessage(userJid, {
-                            document: sessionKnight,
+                            document: sessionPrimeSA,
                             mimetype: 'application/json',
                             fileName: 'creds.json'
                         });
-                        console.log("📄 Session file sent successfully");
+                        console.log("📄 PrimeSA_Session file sent successfully");
 
                         // Send video thumbnail with caption
-                        await KnightBot.sendMessage(userJid, {
-                            image: { url: 'https://img.youtube.com/vi/-oz_u1iMgf8/maxresdefault.jpg' },
-                            caption: `🎬 *KnightBot MD V2.0 Full Setup Guide!*\n\n🚀 Bug Fixes + New Commands + Fast AI Chat\n📺 Watch Now: https://youtu.be/NjOipI2AoMk`
-                        });
-                        console.log("🎬 Video guide sent successfully");
+                    await sock.sendMessage(userJid, {
+                     image: { url: 'https://img.youtube.com/vi/-oz_u1iMgf8/hqdefault.jpg' },
+                       caption: `🎬 *PrimeSA_Bot MD V1.0 Setup Guide!*\n\n📺 Watch Now:\nhttps://youtube.com/@professorsahil-m7q?si=1kLYPaExry8NceJU`
+                     });
+
+                        console.log("🎬 Video guide sent successfully.");
 
                         // Send warning message
-                        await KnightBot.sendMessage(userJid, {
-                            text: `⚠️Do not share this file with anybody⚠️\n 
-┌┤✑  Thanks for using Knight Bot
-│└────────────┈ ⳹        
-│©2025 Mr Unique Hacker 
-└─────────────────┈ ⳹\n\n`
+                        await PrimeSA_Bot.sendMessage(userJid, {
+                            text: `⚠️Do not share this PrimeSA_file with anybody⚠️\n 
+┏━━━━━━━━━━━━━━━━━━━━━━━⬣
+┃ 🤖 *PrimeSA_Bot MD V1.0*
+┃ ⚡ Fast • Secure • Reliable
+┣━━━━━━━━━━━━━━━━━━━━━━━⬣
+┃ ✅ Thanks for using PrimeSA_Bot!
+┃ 📺 YouTube: @ProfessorSahil
+┃ 💬 WhatsApp Channel @https://whatsapp.com/channel/0029VbCIUrC4tRrmjdI9QM1x
+┣━━━━━━━━━━━━━━━━━━━━━━━⬣
+┃ © 2026 Professor Sahil
+┃ ❤️ Powered by PrimeSA_Bot
+┗━━━━━━━━━━━━━━━━━━━━━━━⬣\n\n
                         });
                         console.log("⚠️ Warning message sent successfully");
 
@@ -101,7 +112,7 @@ router.get('/', async (req, res) => {
                         await delay(1000);
                         removeFile(dirs);
                         console.log("✅ Session cleaned up successfully");
-                        console.log("🎉 Process completed successfully!");
+                        console.log("🎉 PrimeSA_Process completed successfully!");
                         // Do not exit the process, just finish gracefully
                     } catch (error) {
                         console.error("❌ Error sending messages:", error);
@@ -131,13 +142,13 @@ router.get('/', async (req, res) => {
                 }
             });
 
-            if (!KnightBot.authState.creds.registered) {
+            if (!PrimeSA_Bot.authState.creds.registered) {
                 await delay(3000); // Wait 3 seconds before requesting pairing code
                 num = num.replace(/[^\d+]/g, '');
                 if (num.startsWith('+')) num = num.substring(1);
 
                 try {
-                    let code = await KnightBot.requestPairingCode(num);
+                    let code = await PrimeSA_Bot.requestPairingCode(num);
                     code = code?.match(/.{1,4}/g)?.join('-') || code;
                     if (!res.headersSent) {
                         console.log({ num, code });
@@ -151,7 +162,7 @@ router.get('/', async (req, res) => {
                 }
             }
 
-            KnightBot.ev.on('creds.update', saveCreds);
+            PtimeSA_Bot.ev.on('creds.update', saveCreds);
         } catch (err) {
             console.error('Error initializing session:', err);
             if (!res.headersSent) {
