@@ -20,7 +20,7 @@
 
 <br>
 
-<a href="https://primesa-bot-is9w.onrender.com">
+<a href="https://primesa-bot-pairing-code-k45r.onrender.com">
 <img src="https://img.shields.io/badge/🟢%20Generate%20Pair%20Code-Click%20Here-22c55e?style=for-the-badge&labelColor=16a34a" alt="Generate Pair Code"/>
 </a>
 
