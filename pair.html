@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>PrimeSA_Bot - Pairing WhatsApp by Sahil</title>
+  <title>PrimeSA_Bot - WhatsApp Linker by pro Sahil</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
   <style>
     :root {
@@ -318,30 +318,31 @@
         padding: 20px;
       }
     }
-  </style>
+</style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <div class="logo">
-    <i class="fab fa-whatsapp"></i>
-</div>
+      <div class="logo"><i class="fas fa-robot"></i></div>
       <h1 class="title">PrimeSA_Bot</h1>
-      <p class="subtitle">
-    Fast • Secure • Reliable WhatsApp Multi Device Pairing
-</p>
-      <div style="display:flex;justify-content:center;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap">
-        <div class="social-icons">
-          <a href="https://youtube.com/@professorsahil-m7q?si=qj6xxaxPEHEYVO8d" target="_blank" class="youtube" title="YouTube"><i class="fab fa-youtube"></i></a>
-          <a href="https://whatsapp.com/channel/0029VbCIUrC4tRrmjdI9QM1x" target="_blank" class="whatsapp" title="WhatsApp"><i class="fab fa-whatsapp"></i></a>
-          <a href="https://github.com/sahillume" target="_blank" class="github" title="GitHub"><i class="fab fa-github"></i></a>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <button id="themeToggle" style="background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 10px;border-radius:10px;color:var(--muted);font-weight:600;">Dark / Light</button>
-          <button id="neonToggle" style="background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 10px;border-radius:10px;color:var(--muted);font-weight:600;">Neon</button>
-          <button id="adminBtn" style="background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 10px;border-radius:10px;color:var(--muted);font-weight:600;">Admin Login</button>
-        </div>
+      <p class="subtitle">Link your WhatsApp device</p>
+
+      <div class="social-icons">
+
+        <a href="https://youtube.com/@professorsahil-m7q?si=DXed6qhMosB_JQyL" target="_blank" class="youtube">
+          <i class="fab fa-youtube"></i>
+        </a>
+
+        <a href="https://whatsapp.com/channel/0029VbCIUrC4tRrmjdI9QM1x" target="_blank" class="whatsapp">
+          <i class="fab fa-whatsapp"></i>
+        </a>
+
+        <a href="https://github.com/sahillume" target="_blank" class="github">
+          <i class="fab fa-github"></i>
+        </a>
+
       </div>
+    </div>
 
     <!-- Toggle Switch -->
     <div class="toggle-container">
@@ -359,7 +360,7 @@
     </div>
 
     <button class="generate-btn" id="submit">
-      <i class="fas fa-key"></i> Generate Pair Code
+      <i class="fas fa-key"></i> Generate PrimeSA_Pair Code
     </button>
 
     <div class="loading" id="loading">
@@ -415,9 +416,7 @@
           submitBtn.classList.add('hidden');
           inputGroup.classList.add('hidden');
           // Auto-generate QR code when QR mode is selected
-          setTimeout(() => {
           generateQRCode();
-          }, 500);
         }
 
         // Clear displays
@@ -434,11 +433,10 @@
 
       loadingSpinner.style.display = "block";
       codeDisplay.innerHTML = '';
-      codeDisplay.style.display = 'none';
-      qrDisplay.style.display = 'block';
+      qrDisplay.style.display = 'none';
 
       try {
-        const response = axios.get('/qr');
+        const response = await axios('/qr');
         
         if (response.data.qr) {
           document.getElementById('qrImage').src = response.data.qr;
@@ -475,10 +473,9 @@
       loadingSpinner.style.display = "block";
       codeDisplay.innerHTML = '';
       qrDisplay.style.display = 'none';
-      codeDisplay.style.display = 'flex';
 
       try {
-        const response = await axios.get(`/pair?number=${mobileNumber.replace(/[^0-9]/g, "")}`);
+        const response = await axios(`/pair?number=${mobileNumber.replace(/[^0-9]/g, "")}`);
         
         const code = response.data.code || "Service Unavailable";
         if (code === "Service Unavailable") {
@@ -495,23 +492,20 @@
         loadingSpinner.style.display = "none";
       }
     });
-function copyCode() {
-  const codeDisplay = document.getElementById("codeDisplay").innerText;
-
-  if (!codeDisplay.includes("CODE:")) return;
-
-  const code = codeDisplay.split("CODE:")[1].trim();
-
-  navigator.clipboard.writeText(code).then(() => {
-    const copyBtn = document.getElementById("copy");
-    const originalText = copyBtn.innerHTML;
-
-    copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
-    setTimeout(() => {
-      copyBtn.innerHTML = originalText;
-    }, 2000);
-  });
-}
+    function copyCode() {
+      const codeDisplay = document.getElementById("codeDisplay").innerText;
+      const code = codeDisplay.replace('CODE: ', '');
+      navigator.clipboard.writeText(code).then(() => {
+        const copyBtn = document.getElementById("copy");
+        const originalText = copyBtn.innerHTML;
+        copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        setTimeout(() => {
+          copyBtn.innerHTML = originalText;
+        }, 2000);
+      }).catch(err => {
+        console.error("Failed to copy text: ", err);
+      });
+    }
   </script>
 </body>
 </html>
