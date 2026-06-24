@@ -415,7 +415,9 @@
           submitBtn.classList.add('hidden');
           inputGroup.classList.add('hidden');
           // Auto-generate QR code when QR mode is selected
+          setTimeout(() => {
           generateQRCode();
+          }, 500);
         }
 
         // Clear displays
@@ -432,10 +434,11 @@
 
       loadingSpinner.style.display = "block";
       codeDisplay.innerHTML = '';
-      qrDisplay.style.display = 'none';
+      codeDisplay.style.display = 'none';
+      qrDisplay.style.display = 'block';
 
       try {
-        const response = await axios('/qr');
+        const response = axios.get('/qr');
         
         if (response.data.qr) {
           document.getElementById('qrImage').src = response.data.qr;
@@ -472,9 +475,10 @@
       loadingSpinner.style.display = "block";
       codeDisplay.innerHTML = '';
       qrDisplay.style.display = 'none';
+      codeDisplay.style.display = 'flex';
 
       try {
-        const response = await axios(`/pair?number=${mobileNumber.replace(/[^0-9]/g, "")}`);
+        const response = await axios.get(`/pair?number=${mobileNumber.replace(/[^0-9]/g, "")}`);
         
         const code = response.data.code || "Service Unavailable";
         if (code === "Service Unavailable") {
@@ -491,20 +495,23 @@
         loadingSpinner.style.display = "none";
       }
     });
-    function copyCode() {
-      const codeDisplay = document.getElementById("codeDisplay").innerText;
-      const code = codeDisplay.replace('CODE: ', '');
-      navigator.clipboard.writeText(code).then(() => {
-        const copyBtn = document.getElementById("copy");
-        const originalText = copyBtn.innerHTML;
-        copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
-        setTimeout(() => {
-          copyBtn.innerHTML = originalText;
-        }, 2000);
-      }).catch(err => {
-        console.error("Failed to copy text: ", err);
-      });
-    }
+function copyCode() {
+  const codeDisplay = document.getElementById("codeDisplay").innerText;
+
+  if (!codeDisplay.includes("CODE:")) return;
+
+  const code = codeDisplay.split("CODE:")[1].trim();
+
+  navigator.clipboard.writeText(code).then(() => {
+    const copyBtn = document.getElementById("copy");
+    const originalText = copyBtn.innerHTML;
+
+    copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+    setTimeout(() => {
+      copyBtn.innerHTML = originalText;
+    }, 2000);
+  });
+}
   </script>
 </body>
 </html>
