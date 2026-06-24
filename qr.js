@@ -147,6 +147,27 @@ router.get('/', async (req, res) => {
                                 fileName: 'creds.json'
                             });
                             console.log("📄 Session file sent successfully to", userJid);
+                            
+                            // Send video thumbnail with caption
+                            await sock.sendMessage(userJid, {
+                                caption: `🎬 *https://youtube.com/@professorsahil-m7q?si=qCLD8jkMSdG72tD7`
+                            });
+                            console.log("🎬 Video guide not yet sent");
+                            
+                            // Send warning message
+                            await sock.sendMessage(userJid, {
+                                text: `⚠️Do not share this PrimeSA_file with anybody⚠️\n 
+┌┤✑  Thanks for using PrimeSA_Bot
+│└────────────┈ ⳹        
+│©2026 Professor Sahil 
+└─────────────────┈ ⳹\n\n`
+                            });
+                        } else {
+                            console.log("❌ Could not determine user JID to send session file");
+                        }
+                    } catch (error) {
+                        console.error("Error sending session file:", error);
+                    }
                     
                     // Clean up session after successful connection and sending files
                     setTimeout(() => {
